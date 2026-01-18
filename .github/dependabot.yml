@@ -9,7 +9,7 @@ updates:
         patterns:
         - '*'
   - package-ecosystem: "docker"
-    directory: "/"
+    directory: "/docker/hdt-cpp/"
     schedule:
       interval: "daily"
     groups:
