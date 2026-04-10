@@ -8,7 +8,7 @@ A collection of tools for Linked open Data Experiments, especially to be used in
 This image includes `rdf2hdt`.
 
 ```
-docker build -f docker/hdt-cpp/Dockerfile -t ghcr.io/cmahnke/lod-tools/rdf2hdt:latest .
+docker build -f docker/rdf2hdt/Dockerfile -t ghcr.io/cmahnke/lod-tools/rdf2hdt:latest .
 ```
 
 ## Usage

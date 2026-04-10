@@ -6,7 +6,6 @@ ARG HDTCPP_GIT_REPO="https://github.com/rdfhdt/hdt-cpp.git"
 ARG HDTCPP_GIT_TAG="develop"
 ARG BUILD_DEPS="build-base cmake git zlib-dev bzip2-dev curl-dev bash autoconf automake libtool serd-dev"
 
-
 WORKDIR /tmp
 RUN apk --update upgrade &&\
     apk add --no-cache $BUILD_DEPS && \
@@ -21,7 +20,8 @@ RUN apk --update upgrade &&\
     ./autogen.sh && \
     ./configure && \
     make CXX_FLAGS="-include cstdint" -j$(nproc) && \
-    make install
+    make install && \
+    ldd /usr/local/bin/rdf2hdt
 
 FROM alpine:3.20
 
@@ -34,6 +34,8 @@ COPY --from=builder /usr/local/bin/rdf2hdt /usr/local/bin/
 COPY --from=builder /usr/local/bin/hdt2rdf /usr/local/bin/
 COPY --from=builder /usr/local/bin/hdtSearch /usr/local/bin/
 COPY --from=builder /usr/local/lib/libhdt.so* /usr/local/lib/
+COPY --from=builder /usr/local/lib/libcds.so* /usr/local/lib/
+
 
 RUN apk add --no-cache $RUN_DEPS && \
     ldconfig /usr/local/lib
