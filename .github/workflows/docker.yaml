@@ -44,7 +44,7 @@ jobs:
         with:
           push: true
           context: .
-          file: docker/hdt-cpp/Dockerfile
+          file: docker/rdf2hdt/Dockerfile
           platforms: linux/amd64,linux/arm64
           tags: |
-            ghcr.io/cmahnke/lod-tools/hdt-cpp:latest
+            ghcr.io/cmahnke/lod-tools/rdf2hdt:latest
