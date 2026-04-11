@@ -72,21 +72,21 @@ jobs:
       - name: Upload web artifact
         uses: actions/upload-artifact@v4
         with:
-          name: hdt-wasm-web
+          name: hdt-web
           path: pkg/web/
           retention-days: 30
 
       - name: Upload bundler artifact
         uses: actions/upload-artifact@v4
         with:
-          name: hdt-wasm-bundler
+          name: hdt-bundler
           path: pkg/bundler/
           retention-days: 30
 
       - name: Upload nodejs artifact
         uses: actions/upload-artifact@v4
         with:
-          name: hdt-wasm-nodejs
+          name: hdt-nodejs
           path: pkg/nodejs/
           retention-days: 30
 
@@ -103,7 +103,7 @@ jobs:
       - name: Download bundler artifact
         uses: actions/download-artifact@v4
         with:
-          name: hdt-wasm-bundler
+          name: hdt-bundler
           path: pkg/
 
       - name: Setup Node.js
