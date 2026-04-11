@@ -156,6 +156,11 @@ jobs:
       contents: write
 
     steps:
+      - name: Checkout (für git tag Operationen)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -168,7 +173,6 @@ jobs:
           tar czf release/hdt-wasm-bundler.tar.gz -C artifacts/hdt-wasm-bundler .
           tar czf release/hdt-wasm-nodejs.tar.gz -C artifacts/hdt-wasm-nodejs .
 
-          # npm-installierbarer Tarball aus dem Bundler-Build
           cd artifacts/hdt-wasm-bundler
           npm pack
           mv *.tgz ../../release/cmahnke-hdt-wasm.tgz
@@ -177,71 +181,45 @@ jobs:
           echo "=== Release files ==="
           ls -lh release/
 
-      - name: Generate release tag
-        id: tag
+      - name: Read version
+        id: meta
         run: |
-          # Version aus package.json lesen
           VERSION=$(jq -r '.version' artifacts/hdt-wasm-bundler/package.json)
-          DATE=$(date +%Y%m%d-%H%M%S)
-          TAG="v${VERSION}-${DATE}"
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Tag: ${TAG}"
 
-      - name: Delete existing 'latest' release
-        uses: cb80/delrel@latest
-        with:
-          tag: latest
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Delete existing 'latest' tag
-        run: |
-          git push origin :refs/tags/latest 2>/dev/null || true
+      - name: Delete existing 'latest' release and tag
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete latest --yes --cleanup-tag 2>/dev/null || true
+
+      - name: Create 'latest' tag
+        run: |
+          git tag -f latest
+          git push -f origin latest
 
       - name: Create 'latest' release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest
-          name: "Latest Build (v${{ steps.tag.outputs.version }})"
-          body: |
-            **Automatischer Build vom `${{ github.sha }}`**
-
-            ### Installation ohne GitHub Registry Login
-
-            ```bash
-            npm i https://github.com/${{ github.repository }}/releases/download/latest/cmahnke-hdt-wasm.tgz
-            ```
-
-            ### Inhalte
-
-            | Datei | Target | Beschreibung |
-            |-------|--------|--------------|
-            | `cmahnke-hdt-wasm.tgz` | bundler | npm-installierbarer Tarball |
-            | `hdt-wasm-web.tar.gz` | web | Für `<script type="module">` |
-            | `hdt-wasm-bundler.tar.gz` | bundler | Für Vite/Webpack |
-            | `hdt-wasm-nodejs.tar.gz` | nodejs | Für Node.js |
-          make_latest: true
-          files: |
-            release/cmahnke-hdt-wasm.tgz
-            release/hdt-wasm-web.tar.gz
-            release/hdt-wasm-bundler.tar.gz
-            release/hdt-wasm-nodejs.tar.gz
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create latest \
+            release/cmahnke-hdt-wasm.tgz \
+            release/hdt-wasm-web.tar.gz \
+            release/hdt-wasm-bundler.tar.gz \
+            release/hdt-wasm-nodejs.tar.gz \
+            --title "Latest Build (v${{ steps.meta.outputs.version }})" \
+            --notes "**Automatischer Build vom \`${{ github.sha }}\`**
 
-      - name: Create versioned release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.tag.outputs.tag }}
-          name: "Build ${{ steps.tag.outputs.tag }}"
-          body: |
-            Build von Commit `${{ github.sha }}`
-          files: |
-            release/cmahnke-hdt-wasm.tgz
-            release/hdt-wasm-web.tar.gz
-            release/hdt-wasm-bundler.tar.gz
-            release/hdt-wasm-nodejs.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ### Installation ohne Login
+
+          \`\`\`bash
+          npm i https://github.com/${{ github.repository }}/releases/download/latest/cmahnke-hdt-wasm.tgz
+          \`\`\`
+
+          | Datei | Target |
+          |-------|--------|
+          | cmahnke-hdt-wasm.tgz | npm install (bundler) |
+          | hdt-wasm-web.tar.gz | script type=module |
+          | hdt-wasm-bundler.tar.gz | Vite/Webpack |
+          | hdt-wasm-nodejs.tar.gz | Node.js |" \
+            --latest
