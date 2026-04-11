@@ -117,7 +117,7 @@ jobs:
         run: |
           cd pkg
           jq '. + {
-            name: "@cmahnke/hdt-wasm",
+            name: "@cmahnke/hdt",
             repository: {
               type: "git",
               url: "https://github.com/KonradHoeffner/hdt.git"
@@ -132,7 +132,7 @@ jobs:
       - name: Delete existing package version
         uses: actions/delete-package-versions@v5
         with:
-          package-name: "hdt-wasm"
+          package-name: "hdt"
           package-type: "npm"
           owner: "cmahnke"
           min-versions-to-keep: 0
@@ -169,13 +169,13 @@ jobs:
       - name: Create tarballs
         run: |
           mkdir -p release
-          tar czf release/hdt-wasm-web.tar.gz -C artifacts/hdt-wasm-web .
-          tar czf release/hdt-wasm-bundler.tar.gz -C artifacts/hdt-wasm-bundler .
-          tar czf release/hdt-wasm-nodejs.tar.gz -C artifacts/hdt-wasm-nodejs .
+          tar czf release/hdt-web.tar.gz -C artifacts/hdt-web .
+          tar czf release/hdt-bundler.tar.gz -C artifacts/hdt-bundler .
+          tar czf release/hdt-nodejs.tar.gz -C artifacts/hdt-nodejs .
 
-          cd artifacts/hdt-wasm-bundler
+          cd artifacts/hdt-bundler
           npm pack
-          mv *.tgz ../../release/cmahnke-hdt-wasm.tgz
+          mv *.tgz ../../release/cmahnke-hdt.tgz
           cd ../..
 
           echo "=== Release files ==="
@@ -184,7 +184,7 @@ jobs:
       - name: Read version
         id: meta
         run: |
-          VERSION=$(jq -r '.version' artifacts/hdt-wasm-bundler/package.json)
+          VERSION=$(jq -r '.version' artifacts/hdt-bundler/package.json)
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Delete existing 'latest' release and tag
@@ -203,23 +203,23 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create latest \
-            release/cmahnke-hdt-wasm.tgz \
-            release/hdt-wasm-web.tar.gz \
-            release/hdt-wasm-bundler.tar.gz \
-            release/hdt-wasm-nodejs.tar.gz \
+            release/cmahnke-hdt.tgz \
+            release/hdt-web.tar.gz \
+            release/hdt-bundler.tar.gz \
+            release/hdt-nodejs.tar.gz \
             --title "Latest Build (v${{ steps.meta.outputs.version }})" \
             --notes "**Automatischer Build vom \`${{ github.sha }}\`**
 
           ### Installation ohne Login
 
           \`\`\`bash
-          npm i https://github.com/${{ github.repository }}/releases/download/latest/cmahnke-hdt-wasm.tgz
+          npm i https://github.com/${{ github.repository }}/releases/download/latest/cmahnke-hdt.tgz
           \`\`\`
 
           | Datei | Target |
           |-------|--------|
-          | cmahnke-hdt-wasm.tgz | npm install (bundler) |
-          | hdt-wasm-web.tar.gz | script type=module |
-          | hdt-wasm-bundler.tar.gz | Vite/Webpack |
-          | hdt-wasm-nodejs.tar.gz | Node.js |" \
+          | cmahnke-hdt.tgz | npm install (bundler) |
+          | hdt-web.tar.gz | script type=module |
+          | hdt-bundler.tar.gz | Vite/Webpack |
+          | hdt-nodejs.tar.gz | Node.js |" \
             --latest
