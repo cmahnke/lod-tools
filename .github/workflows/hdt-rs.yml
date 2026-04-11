@@ -4,7 +4,6 @@ name: Build HDT WASM Artifact
 on:
   push:
     branches: [main, master]
-    tags: ["v*"]
   pull_request:
     branches: [main, master]
   workflow_dispatch:
@@ -95,7 +94,6 @@ jobs:
     name: Publish to GitHub Packages
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
 
     permissions:
       contents: read
@@ -113,13 +111,13 @@ jobs:
         with:
           node-version: "20"
           registry-url: "https://npm.pkg.github.com"
-          scope: "@konradhoeffner"
+          scope: "@cmahnke"
 
       - name: Prepare package for GitHub Packages
         run: |
           cd pkg
           jq '. + {
-            name: "@projektemacher/hdt-wasm",
+            name: "@cmahnke/hdt-wasm",
             repository: {
               type: "git",
               url: "https://github.com/KonradHoeffner/hdt.git"
@@ -131,11 +129,33 @@ jobs:
           echo "=== package.json ==="
           cat package.json
 
-      - name: Setup local repository
+      - name: Delete existing package version
         run: |
-          echo registry=https://npm.pkg.github.com/ > .npmrc
-          echo always-auth=true >> .npmrc
-          echo '//npm.pkg.github.com/cmahnke:_authToken=${{ secrets.GITHUB_TOKEN }} @cmahnke:registry=https://npm.pkg.github.com/cmahnke' >> .npmrc
+          cd pkg
+          PACKAGE_NAME=$(jq -r .name package.json)
+          PACKAGE_VERSION=$(jq -r .version package.json)
+          echo "Checking for existing version ${PACKAGE_VERSION} of ${PACKAGE_NAME}"
+
+          # Get all versions and find the matching version ID
+          VERSION_ID=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/users/cmahnke/packages/npm/hdt-wasm/versions" \
+            | jq -r ".[] | select(.name == \"${PACKAGE_VERSION}\") | .id")
+
+          if [ -n "$VERSION_ID" ] && [ "$VERSION_ID" != "null" ]; then
+            echo "Deleting existing version ${PACKAGE_VERSION} (ID: ${VERSION_ID})"
+            curl -s -X DELETE \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/users/cmahnke/packages/npm/hdt-wasm/versions/${VERSION_ID}"
+            echo "Deleted."
+            # Give the registry a moment to process
+            sleep 5
+          else
+            echo "No existing version found, proceeding."
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish
         run: |
