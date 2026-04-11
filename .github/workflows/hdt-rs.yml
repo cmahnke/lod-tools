@@ -130,32 +130,14 @@ jobs:
           cat package.json
 
       - name: Delete existing package version
-        run: |
-          cd pkg
-          PACKAGE_NAME=$(jq -r .name package.json)
-          PACKAGE_VERSION=$(jq -r .version package.json)
-          echo "Checking for existing version ${PACKAGE_VERSION} of ${PACKAGE_NAME}"
-
-          # Get all versions and find the matching version ID
-          VERSION_ID=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/users/cmahnke/packages/npm/hdt-wasm/versions" \
-            | jq -r ".[] | select(.name == \"${PACKAGE_VERSION}\") | .id")
-
-          if [ -n "$VERSION_ID" ] && [ "$VERSION_ID" != "null" ]; then
-            echo "Deleting existing version ${PACKAGE_VERSION} (ID: ${VERSION_ID})"
-            curl -s -X DELETE \
-              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-              -H "Accept: application/vnd.github.v3+json" \
-              "https://api.github.com/users/cmahnke/packages/npm/hdt-wasm/versions/${VERSION_ID}"
-            echo "Deleted."
-            # Give the registry a moment to process
-            sleep 5
-          else
-            echo "No existing version found, proceeding."
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: "hdt-wasm"
+          package-type: "npm"
+          owner: "cmahnke"
+          min-versions-to-keep: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
 
       - name: Publish
         run: |
