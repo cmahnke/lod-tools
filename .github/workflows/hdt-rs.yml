@@ -10,6 +10,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  BINARYEN_VERSION: version_129
 
 jobs:
   build:
@@ -36,10 +37,9 @@ jobs:
 
       - name: Install Binaryen
         run: |
-          BINARYEN_VERSION=version_120
-          curl -sSL "https://github.com/WebAssembly/binaryen/releases/download/${BINARYEN_VERSION}/binaryen-${BINARYEN_VERSION}-x86_64-linux.tar.gz" \
+          curl -sSL "https://github.com/WebAssembly/binaryen/releases/download/${BINARYEN_VERSION}/binaryen-${{ env.BINARYEN_VERSION }}-x86_64-linux.tar.gz" \
             | tar -xz -C $HOME
-          echo "$HOME/binaryen-${BINARYEN_VERSION}/bin" >> $GITHUB_PATH
+          echo "$HOME/binaryen-${{ env.BINARYEN_VERSION }}/bin" >> $GITHUB_PATH
 
       - name: Verify Binaryen
         run: wasm-opt --version
