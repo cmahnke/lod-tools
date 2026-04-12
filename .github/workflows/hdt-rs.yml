@@ -29,6 +29,11 @@ jobs:
           toolchain: stable
           target: wasm32-unknown-unknown
 
+      - name: Install wasm-opt
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y binaryen
+
       - name: Install wasm-pack
         uses: jetli/wasm-pack-action@v0.4.0
         with:
@@ -44,21 +49,6 @@ jobs:
 
       - name: Build WASM (bundler)
         run: wasm-pack build --target bundler --release --out-dir pkg/bundler
-
-      - name: Install wasm-opt
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y binaryen
-
-      - name: Optimize WASM binaries
-        run: |
-          for wasm_file in pkg/web/*.wasm pkg/bundler/*.wasm; do
-            if [ -f "$wasm_file" ]; then
-              wasm-opt -Oz "$wasm_file" -o "$wasm_file.opt"
-              mv "$wasm_file.opt" "$wasm_file"
-              echo "Optimized: $wasm_file ($(stat -c%s "$wasm_file") bytes)"
-            fi
-          done
 
       - name: List artifacts
         run: |
