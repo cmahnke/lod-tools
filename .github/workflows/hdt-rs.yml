@@ -137,36 +137,47 @@ jobs:
 
   release:
     name: Create GitHub Release with Tarball
-    needs: build
+    needs: [build, publish]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
 
     permissions:
       contents: write
+      packages: read
 
     steps:
-      - name: Checkout (für git tag Operationen)
+      - name: Checkout (for git tag operations)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Download all artifacts
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@cmahnke"
+
+      - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts/
 
-      - name: Create tarballs
+      - name: Download package from GitHub npm Registry
         run: |
           mkdir -p release
+          npm pack @cmahnke/hdt --registry https://npm.pkg.github.com
+          mv cmahnke-hdt-*.tgz release/cmahnke-hdt.tgz
+          echo "=== Downloaded from registry ==="
+          ls -lh release/cmahnke-hdt.tgz
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create tarballs from build artifacts
+        run: |
           tar czf release/hdt-web.tar.gz -C artifacts/hdt-web .
           tar czf release/hdt-bundler.tar.gz -C artifacts/hdt-bundler .
-
-          cd artifacts/hdt-bundler
-          npm pack
-          mv *.tgz ../../release/cmahnke-hdt.tgz
-          cd ../..
-
-          echo "=== Release files ==="
+          echo "=== All release files ==="
           ls -lh release/
 
       - name: Read version
@@ -203,9 +214,9 @@ jobs:
           npm i https://github.com/${{ github.repository }}/releases/download/latest/cmahnke-hdt.tgz
           \`\`\`
 
-          | Datei | Target |
-          |-------|--------|
-          | cmahnke-hdt.tgz | npm install (bundler) |
+          | Datei | Beschreibung |
+          |-------|-------------|
+          | cmahnke-hdt.tgz | npm-Paket (identisch mit \`@cmahnke/hdt\` aus GitHub Packages) |
           | hdt-web.tar.gz | script type=module |
           | hdt-bundler.tar.gz | Vite/Webpack |" \
             --latest
