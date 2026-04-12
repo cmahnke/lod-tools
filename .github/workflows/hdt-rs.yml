@@ -45,9 +45,6 @@ jobs:
       - name: Build WASM (bundler)
         run: wasm-pack build --target bundler --release --out-dir pkg/bundler
 
-      - name: Build WASM (nodejs)
-        run: wasm-pack build --target nodejs --release --out-dir pkg/nodejs
-
       - name: Install wasm-opt
         run: |
           sudo apt-get update
@@ -55,7 +52,7 @@ jobs:
 
       - name: Optimize WASM binaries
         run: |
-          for wasm_file in pkg/web/*.wasm pkg/bundler/*.wasm pkg/nodejs/*.wasm; do
+          for wasm_file in pkg/web/*.wasm pkg/bundler/*.wasm; do
             if [ -f "$wasm_file" ]; then
               wasm-opt -Oz "$wasm_file" -o "$wasm_file.opt"
               mv "$wasm_file.opt" "$wasm_file"
@@ -67,7 +64,6 @@ jobs:
         run: |
           echo "=== web ===" && ls -lh pkg/web/
           echo "=== bundler ===" && ls -lh pkg/bundler/
-          echo "=== nodejs ===" && ls -lh pkg/nodejs/
 
       - name: Upload web artifact
         uses: actions/upload-artifact@v4
@@ -81,13 +77,6 @@ jobs:
         with:
           name: hdt-bundler
           path: pkg/bundler/
-          retention-days: 30
-
-      - name: Upload nodejs artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: hdt-nodejs
-          path: pkg/nodejs/
           retention-days: 30
 
   publish:
@@ -171,7 +160,6 @@ jobs:
           mkdir -p release
           tar czf release/hdt-web.tar.gz -C artifacts/hdt-web .
           tar czf release/hdt-bundler.tar.gz -C artifacts/hdt-bundler .
-          tar czf release/hdt-nodejs.tar.gz -C artifacts/hdt-nodejs .
 
           cd artifacts/hdt-bundler
           npm pack
@@ -206,7 +194,6 @@ jobs:
             release/cmahnke-hdt.tgz \
             release/hdt-web.tar.gz \
             release/hdt-bundler.tar.gz \
-            release/hdt-nodejs.tar.gz \
             --title "Latest Build (v${{ steps.meta.outputs.version }})" \
             --notes "**Automatischer Build vom \`${{ github.sha }}\`**
 
@@ -220,6 +207,5 @@ jobs:
           |-------|--------|
           | cmahnke-hdt.tgz | npm install (bundler) |
           | hdt-web.tar.gz | script type=module |
-          | hdt-bundler.tar.gz | Vite/Webpack |
-          | hdt-nodejs.tar.gz | Node.js |" \
+          | hdt-bundler.tar.gz | Vite/Webpack |" \
             --latest
