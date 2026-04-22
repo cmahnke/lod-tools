@@ -1,0 +1,3 @@
+[submodule "oxigraph/projektemacher-hugo"]
+	path = oxigraph/projektemacher-hugo
+	url = https://github.com/cmahnke/projektemacher-hugo.git

@@ -1,0 +1,9 @@
+# Config to build a custom Hugo
+default-repo: https://github.com/oxigraph/oxigraph
+prefix: oxigraph
+configs:
+  - suffix: hdt
+    repo: https://github.com/oxigraph/oxigraph
+    tag: v0.5.0
+    prs:
+      - 1437
