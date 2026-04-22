@@ -11,6 +11,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   BINARYEN_VERSION: version_129
+  HDT_VERSION: 0.6.0
 
 jobs:
   build:
@@ -22,7 +23,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: KonradHoeffner/hdt
-          ref: main
+          ref: {{ env.HDT_VERSION}}
 
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
