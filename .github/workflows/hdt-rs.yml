@@ -30,11 +30,6 @@ jobs:
           toolchain: stable
           target: wasm32-unknown-unknown
 
-      # - name: Install wasm-opt
-      #   run: |
-      #     sudo apt-get update
-      #     sudo apt-get install -y binaryen
-
       - name: Install Binaryen
         run: |
           curl -sSL "https://github.com/WebAssembly/binaryen/releases/download/${BINARYEN_VERSION}/binaryen-${{ env.BINARYEN_VERSION }}-x86_64-linux.tar.gz" \
@@ -206,17 +201,5 @@ jobs:
             release/hdt-web.tar.gz \
             release/hdt-bundler.tar.gz \
             --title "Latest Build (v${{ steps.meta.outputs.version }})" \
-            --notes "**Automatischer Build vom \`${{ github.sha }}\`**
-
-          ### Installation ohne Login
-
-          \`\`\`bash
-          npm i https://github.com/${{ github.repository }}/releases/download/latest/cmahnke-hdt.tgz
-          \`\`\`
-
-          | Datei | Beschreibung |
-          |-------|-------------|
-          | cmahnke-hdt.tgz | npm-Paket (identisch mit \`@cmahnke/hdt\` aus GitHub Packages) |
-          | hdt-web.tar.gz | script type=module |
-          | hdt-bundler.tar.gz | Vite/Webpack |" \
+            --notes "**Automatic build of \`${{ github.sha }}\`** $(<docs/release-notes-template.txt)" \
             --latest

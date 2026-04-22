@@ -1,0 +1,13 @@
+
+
+### Installation
+
+```bash
+npm i https://github.com/${{ github.repository }}/releases/download/latest/hdt-web.tgz
+```
+
+| File               | Description                                             |
+|--------------------|---------------------------------------------------------|
+| cmahnke-hdt.tgz    | npm-Paket (same as `@cmahnke/hdt` from GitHub Packages) |
+| hdt-web.tar.gz     | script type=module                                      |
+| hdt-bundler.tar.gz | Vite/Webpack                                            |
