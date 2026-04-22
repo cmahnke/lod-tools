@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout hdt repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: KonradHoeffner/hdt
           ref: main
@@ -66,14 +66,14 @@ jobs:
           echo "=== bundler ===" && ls -lh pkg/bundler/
 
       - name: Upload web artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hdt-web
           path: pkg/web/
           retention-days: 30
 
       - name: Upload bundler artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hdt-bundler
           path: pkg/bundler/
@@ -90,13 +90,13 @@ jobs:
 
     steps:
       - name: Download bundler artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hdt-bundler
           path: pkg/
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
           registry-url: "https://npm.pkg.github.com"
@@ -147,19 +147,19 @@ jobs:
 
     steps:
       - name: Checkout (for git tag operations)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
           registry-url: "https://npm.pkg.github.com"
           scope: "@cmahnke"
 
       - name: Download all build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts/
 
