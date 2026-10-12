@@ -315,7 +315,7 @@ jobs:
         if: steps.check_npm.outputs.exists == 'false' && steps.download.outcome == 'success'
         run: |
           cd pkg
-          npm publish --access public
+          npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
