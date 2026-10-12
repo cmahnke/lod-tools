@@ -15,7 +15,7 @@ on:
       skip_publish:
         description: 'Skip npm and GitHub Packages publishing (build-only test)'
         required: false
-        default: 'false'
+        default: false
         type: boolean
   workflow_call:
     inputs:
@@ -27,7 +27,7 @@ on:
       skip_publish:
         description: 'Skip npm and GitHub Packages publishing'
         required: false
-        default: 'false'
+        default: false
         type: boolean
 
 env:
@@ -105,7 +105,7 @@ jobs:
           ref: ${{ matrix.hdt_version }}
 
       - name: Install Rust toolchain
-        uses: actions-rust/lang-setup-rust-toolchain@v2
+        uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
           toolchain: stable
           target: wasm32-unknown-unknown
@@ -157,7 +157,7 @@ jobs:
   publish-gpr:
     name: Publish to GitHub Packages ${{ matrix.hdt_version }}
     needs: [build, discover]
-    if: ${{ always() && needs.build.result != 'skipped' && inputs.skip_publish != 'true' }}
+    if: ${{ needs.build.result == 'success' && inputs.skip_publish != true }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -223,7 +223,7 @@ jobs:
   publish-npm:
     name: Publish to npm ${{ matrix.hdt_version }}
     needs: [build, discover]
-    if: ${{ always() && needs.build.result != 'skipped' && inputs.skip_publish != 'true' }}
+    if: ${{ needs.build.result == 'success' && inputs.skip_publish != true }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -286,7 +286,7 @@ jobs:
   release:
     name: Create release ${{ matrix.hdt_version }}
     needs: [build, publish-gpr, publish-npm, discover]
-    if: ${{ always() && needs.build.result != 'skipped' }}
+    if: ${{ needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
