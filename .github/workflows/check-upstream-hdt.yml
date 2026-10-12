@@ -1,0 +1,65 @@
+name: Check for new upstream HDT release
+
+on:
+  schedule:
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get upstream tags
+        id: upstream
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAGS=$(gh api repos/KonradHoeffner/hdt/tags --paginate \
+            --jq '[.[] | select(.name | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) | .name]' 2>/dev/null || echo '[]')
+          MIN_VERSION="0.6.0"
+          FILTERED=$(echo "$TAGS" | jq -c --arg min "$MIN_VERSION" \
+            '[.[] | select((. | split(".") | map(tonumber)) >= ($min | split(".") | map(tonumber)))] | sort_by(split(".") | map(tonumber)) | reverse')
+          echo "tags=$(echo "$FILTERED" | jq -c '.')" >> "$GITHUB_OUTPUT"
+          LATEST=$(echo "$FILTERED" | jq -r '.[0] // empty')
+          echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+          echo "Upstream tags >= $MIN_VERSION: $(echo "$FILTERED" | jq -c '.')"
+
+      - name: Check which versions are missing
+        id: missing
+        run: |
+          MISSING="[]"
+          for TAG in $(echo "${{ steps.upstream.outputs.tags }}" | jq -r '.[]'); do
+            GH_EXISTS=false
+            NPM_EXISTS=false
+            if gh release view "hdt-$TAG" >/dev/null 2>&1; then
+              GH_EXISTS=true
+            fi
+            if npm view "@projektemacher/hdt@$TAG" version >/dev/null 2>&1; then
+              NPM_EXISTS=true
+            fi
+            if [ "$GH_EXISTS" = "false" ] && [ "$NPM_EXISTS" = "false" ]; then
+              MISSING=$(echo "$MISSING" | jq -c --arg t "$TAG" '. + [$t]')
+              echo "Missing: $TAG"
+            else
+              echo "Exists: $TAG (gh=$GH_EXISTS, npm=$NPM_EXISTS)"
+            fi
+          done
+          echo "missing=$(echo "$MISSING" | jq -c '.')" >> "$GITHUB_OUTPUT"
+          echo "Missing versions: $(echo "$MISSING" | jq -c '.')"
+
+      - name: Trigger build for missing versions
+        if: steps.missing.outputs.missing != '[]'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          MISSING=$(echo "${{ steps.missing.outputs.missing }}" | jq -r '. | join(", ")')
+          echo "Triggering build for: $MISSING"
+          gh workflow run hdt-rs.yml --ref main
