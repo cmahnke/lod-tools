@@ -11,20 +11,24 @@ on:
         description: 'Upstream HDT tag to build (e.g. 0.7.3). Leave empty to build all tags >= MIN_VERSION'
         required: false
         default: ''
+        type: string
       skip_publish:
         description: 'Skip npm and GitHub Packages publishing (build-only test)'
         required: false
         default: 'false'
+        type: boolean
   workflow_call:
     inputs:
       hdt_version:
         description: 'Upstream HDT tag to build'
         required: false
         default: ''
+        type: string
       skip_publish:
         description: 'Skip npm and GitHub Packages publishing'
         required: false
         default: 'false'
+        type: boolean
 
 env:
   CARGO_TERM_COLOR: always
