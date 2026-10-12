@@ -2,7 +2,6 @@ name: Build HDT WASM Artifact
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: hdt-rs-${{ github.ref }}
@@ -273,6 +272,7 @@ jobs:
 
     permissions:
       contents: read
+      id-token: write
 
     steps:
       - name: Check if version exists on npm
@@ -298,7 +298,12 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "20"
-          registry-url: "https://registry.npmjs.org"
+
+      - name: Ensure npm supports OIDC trusted publishing
+        if: steps.check_npm.outputs.exists == 'false' && steps.download.outcome == 'success'
+        run: |
+          npm install -g npm@latest
+          npm --version
 
       - name: Prepare package for npm
         if: steps.check_npm.outputs.exists == 'false' && steps.download.outcome == 'success'
@@ -318,13 +323,11 @@ jobs:
           echo "=== package.json ==="
           cat package.json
 
-      - name: Publish to npm
+      - name: Publish to npm via OIDC trusted publishing
         if: steps.check_npm.outputs.exists == 'false' && steps.download.outcome == 'success'
         run: |
           cd pkg
           npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   release:
     name: Create release ${{ matrix.hdt_version }}
