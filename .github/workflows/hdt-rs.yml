@@ -129,11 +129,35 @@ jobs:
         with:
           key: wasm32-unknown-unknown-${{ matrix.hdt_version }}
 
+      - name: Patch Cargo.toml for wasm32 uuid randomness
+        run: |
+          python3 - <<'PY'
+          import re, io
+          with open('Cargo.toml') as f:
+              content = f.read()
+          anchor = "[target.'cfg(target_arch = \"wasm32\")'.dependencies]"
+          if re.search(r'^uuid\s*=\s*\{.*\}\s*$', content, re.M):
+              print('uuid dependency already present, skipping')
+          else:
+              line = 'uuid = { version = "1", features = ["v4", "js"] }'
+              if anchor in content:
+                  content = content.replace(anchor + '\n', anchor + '\n' + line + '\n', 1)
+              else:
+                  content += '\n' + anchor + '\n' + line + '\n'
+              with open('Cargo.toml', 'w') as f:
+                  f.write(content)
+              print('Added uuid wasm32 js feature to Cargo.toml')
+          PY
+
       - name: Build WASM (web)
         run: wasm-pack build --target web --release --out-dir pkg/web
+        env:
+          RUSTFLAGS: '--cfg getrandom_backend="js"'
 
       - name: Build WASM (bundler)
         run: wasm-pack build --target bundler --release --out-dir pkg/bundler
+        env:
+          RUSTFLAGS: '--cfg getrandom_backend="js"'
 
       - name: List artifacts
         run: |
