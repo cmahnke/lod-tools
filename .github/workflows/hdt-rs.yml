@@ -297,12 +297,12 @@ jobs:
         if: steps.check_npm.outputs.exists == 'false' && steps.download.outcome == 'success'
         uses: actions/setup-node@v7
         with:
-          node-version: "20"
+          node-version: "24"
 
       - name: Ensure npm supports OIDC trusted publishing
         if: steps.check_npm.outputs.exists == 'false' && steps.download.outcome == 'success'
         run: |
-          npm install -g npm@latest
+          npm install -g npm@11
           npm --version
 
       - name: Prepare package for npm
