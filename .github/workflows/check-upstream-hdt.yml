@@ -34,6 +34,8 @@ jobs:
 
       - name: Check which versions are missing
         id: missing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           MISSING="[]"
           for TAG in $(echo "${{ steps.upstream.outputs.tags }}" | jq -r '.[]'); do
@@ -45,7 +47,7 @@ jobs:
             if npm view "@projektemacher/hdt@$TAG" version >/dev/null 2>&1; then
               NPM_EXISTS=true
             fi
-            if [ "$GH_EXISTS" = "false" ] && [ "$NPM_EXISTS" = "false" ]; then
+            if [ "$GH_EXISTS" = "false" ] || [ "$NPM_EXISTS" = "false" ]; then
               MISSING=$(echo "$MISSING" | jq -c --arg t "$TAG" '. + [$t]')
               echo "Missing: $TAG"
             else

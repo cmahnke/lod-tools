@@ -4,6 +4,10 @@ permissions:
   contents: read
   id-token: write
 
+concurrency:
+  group: hdt-rs-${{ github.ref }}
+  cancel-in-progress: false
+
 on:
   push:
     branches: [main, master]
@@ -209,14 +213,16 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download bundler artifact
+        id: download
         if: steps.check_gpr.outputs.exists == 'false'
         uses: actions/download-artifact@v8
+        continue-on-error: true
         with:
           name: hdt-bundler-${{ matrix.hdt_version }}
           path: pkg/
 
       - name: Setup Node.js
-        if: steps.check_gpr.outputs.exists == 'false'
+        if: steps.check_gpr.outputs.exists == 'false' && steps.download.outcome == 'success'
         uses: actions/setup-node@v7
         with:
           node-version: "20"
@@ -224,7 +230,7 @@ jobs:
           scope: "@cmahnke"
 
       - name: Prepare package for GitHub Packages
-        if: steps.check_gpr.outputs.exists == 'false'
+        if: steps.check_gpr.outputs.exists == 'false' && steps.download.outcome == 'success'
         run: |
           cd pkg
           jq '. + {
@@ -241,7 +247,7 @@ jobs:
           cat package.json
 
       - name: Publish
-        if: steps.check_gpr.outputs.exists == 'false'
+        if: steps.check_gpr.outputs.exists == 'false' && steps.download.outcome == 'success'
         run: |
           cd pkg
           npm publish --access public
@@ -272,21 +278,23 @@ jobs:
           fi
 
       - name: Download bundler artifact
+        id: download
         if: steps.check_npm.outputs.exists == 'false'
         uses: actions/download-artifact@v8
+        continue-on-error: true
         with:
           name: hdt-bundler-${{ matrix.hdt_version }}
           path: pkg/
 
       - name: Setup Node.js
-        if: steps.check_npm.outputs.exists == 'false'
+        if: steps.check_npm.outputs.exists == 'false' && steps.download.outcome == 'success'
         uses: actions/setup-node@v7
         with:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
 
       - name: Prepare package for npm
-        if: steps.check_npm.outputs.exists == 'false'
+        if: steps.check_npm.outputs.exists == 'false' && steps.download.outcome == 'success'
         run: |
           cd pkg
           jq '. + {
@@ -304,7 +312,7 @@ jobs:
           cat package.json
 
       - name: Publish to npm
-        if: steps.check_npm.outputs.exists == 'false'
+        if: steps.check_npm.outputs.exists == 'false' && steps.download.outcome == 'success'
         run: |
           cd pkg
           npm publish --access public
@@ -332,18 +340,23 @@ jobs:
           fetch-depth: 0
 
       - name: Download web artifact
+        id: download_web
         uses: actions/download-artifact@v8
+        continue-on-error: true
         with:
           name: hdt-web-${{ matrix.hdt_version }}
           path: artifacts/web/
 
       - name: Download bundler artifact
+        id: download_bundler
         uses: actions/download-artifact@v8
+        continue-on-error: true
         with:
           name: hdt-bundler-${{ matrix.hdt_version }}
           path: artifacts/bundler/
 
       - name: Create tarballs from build artifacts
+        if: steps.download_web.outcome == 'success' && steps.download_bundler.outcome == 'success'
         run: |
           mkdir -p release
           tar czf release/hdt-web-${{ matrix.hdt_version }}.tar.gz -C artifacts/web .
@@ -363,7 +376,7 @@ jobs:
           fi
 
       - name: Create versioned release
-        if: steps.check_release.outputs.exists == 'false'
+        if: steps.check_release.outputs.exists == 'false' && steps.download_web.outcome == 'success' && steps.download_bundler.outcome == 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -375,20 +388,20 @@ jobs:
             --latest=false
 
       - name: Delete existing 'latest' release and tag (only for latest version)
-        if: matrix.hdt_version == needs.discover.outputs.latest
+        if: matrix.hdt_version == needs.discover.outputs.latest && steps.download_web.outcome == 'success' && steps.download_bundler.outcome == 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release delete latest --yes --cleanup-tag 2>/dev/null || true
 
       - name: Create 'latest' tag (only for latest version)
-        if: matrix.hdt_version == needs.discover.outputs.latest
+        if: matrix.hdt_version == needs.discover.outputs.latest && steps.download_web.outcome == 'success' && steps.download_bundler.outcome == 'success'
         run: |
           git tag -f latest
           git push -f origin latest
 
       - name: Create 'latest' release (only for latest version)
-        if: matrix.hdt_version == needs.discover.outputs.latest
+        if: matrix.hdt_version == needs.discover.outputs.latest && steps.download_web.outcome == 'success' && steps.download_bundler.outcome == 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
