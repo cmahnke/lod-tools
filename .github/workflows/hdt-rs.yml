@@ -204,6 +204,7 @@ jobs:
       - name: Check if version exists on GPR
         id: check_gpr
         run: |
+          echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
           if npm view "@cmahnke/hdt@${{ matrix.hdt_version }}" version --registry https://npm.pkg.github.com >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
@@ -237,7 +238,7 @@ jobs:
             name: "@cmahnke/hdt",
             repository: {
               type: "git",
-              url: "https://github.com/KonradHoeffner/hdt.git"
+              url: "git+https://github.com/KonradHoeffner/hdt.git"
             },
             publishConfig: {
               registry: "https://npm.pkg.github.com"
@@ -250,7 +251,13 @@ jobs:
         if: steps.check_gpr.outputs.exists == 'false' && steps.download.outcome == 'success'
         run: |
           cd pkg
-          npm publish --access public
+          if ! npm publish --access public 2>&1 | tee /tmp/publish.log; then
+            if grep -q "E409" /tmp/publish.log; then
+              echo "Version already exists (race), treating as success"
+            else
+              exit 1
+            fi
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -301,7 +308,7 @@ jobs:
             name: "@projektemacher/hdt",
             repository: {
               type: "git",
-              url: "https://github.com/KonradHoeffner/hdt.git"
+              url: "git+https://github.com/KonradHoeffner/hdt.git"
             },
             publishConfig: {
               registry: "https://registry.npmjs.org",
