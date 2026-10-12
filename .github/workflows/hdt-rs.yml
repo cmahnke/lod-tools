@@ -311,9 +311,10 @@ jobs:
           cd pkg
           jq '. + {
             name: "@projektemacher/hdt",
+            homepage: "https://github.com/KonradHoeffner/hdt",
             repository: {
               type: "git",
-              url: "git+https://github.com/KonradHoeffner/hdt.git"
+              url: "https://github.com/cmahnke/lod-tools"
             },
             publishConfig: {
               registry: "https://registry.npmjs.org",
