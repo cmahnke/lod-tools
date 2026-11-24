@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       hdt_version:
-        description: 'Upstream HDT tag to build (e.g. 0.7.3). Leave empty to build all tags >= MIN_VERSION'
+        description: 'Upstream HDT tag to build (e.g. 0.8.0). Leave empty to build all tags >= MIN_VERSION'
         required: false
         default: ''
         type: string
@@ -40,7 +40,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   BINARYEN_VERSION: version_129
-  MIN_VERSION: 0.6.0
+  MIN_VERSION: 0.8.0
   NPM_PACKAGE: '@projektemacher/hdt'
   GPR_PACKAGE: '@cmahnke/hdt'
 

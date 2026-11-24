@@ -1,0 +1,206 @@
+# .github/workflows/wasm-build.yml
+name: Build OxiGraph WASM Artifact with HDT
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  BINARYEN_VERSION: version_129
+  HDT_VERSION: 0.8.0
+
+jobs:
+  build:
+    name: Build WASM
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout hdt repository
+        uses: actions/checkout@v6
+        with:
+          repository: KonradHoeffner/hdt
+          ref: ${{ env.HDT_VERSION}}
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+
+      - name: Install Binaryen
+        run: |
+          curl -sSL "https://github.com/WebAssembly/binaryen/releases/download/${BINARYEN_VERSION}/binaryen-${{ env.BINARYEN_VERSION }}-x86_64-linux.tar.gz" \
+            | tar -xz -C $HOME
+          echo "$HOME/binaryen-${{ env.BINARYEN_VERSION }}/bin" >> $GITHUB_PATH
+
+      - name: Verify Binaryen
+        run: wasm-opt --version
+
+      - name: Install wasm-pack
+        uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: "latest"
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: wasm32-unknown-unknown
+
+      - name: Build WASM (web)
+        run: wasm-pack build --target web --release --out-dir pkg/web
+
+      - name: Build WASM (bundler)
+        run: wasm-pack build --target bundler --release --out-dir pkg/bundler
+
+      - name: List artifacts
+        run: |
+          echo "=== web ===" && ls -lh pkg/web/
+          echo "=== bundler ===" && ls -lh pkg/bundler/
+
+      - name: Upload web artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: hdt-web
+          path: pkg/web/
+          retention-days: 30
+
+      - name: Upload bundler artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: hdt-bundler
+          path: pkg/bundler/
+          retention-days: 30
+
+  publish:
+    name: Publish to GitHub Packages
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Download bundler artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: hdt-bundler
+          path: pkg/
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@cmahnke"
+
+      - name: Prepare package for GitHub Packages
+        run: |
+          cd pkg
+          jq '. + {
+            name: "@cmahnke/hdt",
+            repository: {
+              type: "git",
+              url: "https://github.com/KonradHoeffner/hdt.git"
+            },
+            publishConfig: {
+              registry: "https://npm.pkg.github.com"
+            }
+          }' package.json > package.json.tmp && mv package.json.tmp package.json
+          echo "=== package.json ==="
+          cat package.json
+
+      - name: Delete existing package version
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: "hdt"
+          package-type: "npm"
+          owner: "cmahnke"
+          min-versions-to-keep: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Publish
+        run: |
+          cd pkg
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release:
+    name: Create GitHub Release with Tarball
+    needs: [build, publish]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+
+    permissions:
+      contents: write
+      packages: read
+
+    steps:
+      - name: Checkout (for git tag operations)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@cmahnke"
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts/
+
+      - name: Download package from GitHub npm Registry
+        run: |
+          mkdir -p release
+          npm pack @cmahnke/hdt --registry https://npm.pkg.github.com
+          mv cmahnke-hdt-*.tgz release/cmahnke-hdt.tgz
+          echo "=== Downloaded from registry ==="
+          ls -lh release/cmahnke-hdt.tgz
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create tarballs from build artifacts
+        run: |
+          tar czf release/hdt-web.tar.gz -C artifacts/hdt-web .
+          tar czf release/hdt-bundler.tar.gz -C artifacts/hdt-bundler .
+          echo "=== All release files ==="
+          ls -lh release/
+
+      - name: Read version
+        id: meta
+        run: |
+          VERSION=$(jq -r '.version' artifacts/hdt-bundler/package.json)
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Delete existing 'latest' release and tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete latest --yes --cleanup-tag 2>/dev/null || true
+
+      - name: Create 'latest' tag
+        run: |
+          git tag -f latest
+          git push -f origin latest
+
+      - name: Create 'latest' release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create latest \
+            release/cmahnke-hdt.tgz \
+            release/hdt-web.tar.gz \
+            release/hdt-bundler.tar.gz \
+            --title "Latest Build (v${{ steps.meta.outputs.version }})" \
+            --notes "**Automatic build of \`${{ github.sha }}\`** $(<docs/release-notes-template.txt)" \
+            --latest

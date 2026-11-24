@@ -24,7 +24,7 @@ jobs:
         run: |
           TAGS=$(gh api repos/KonradHoeffner/hdt/tags --paginate \
             --jq '[.[] | select(.name | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) | .name]' 2>/dev/null || echo '[]')
-          MIN_VERSION="0.6.0"
+          MIN_VERSION="0.8.0"
           FILTERED=$(echo "$TAGS" | jq -c --arg min "$MIN_VERSION" \
             '[.[] | select((. | split(".") | map(tonumber)) >= ($min | split(".") | map(tonumber)))] | sort_by(split(".") | map(tonumber)) | reverse')
           echo "tags=$(echo "$FILTERED" | jq -c '.')" >> "$GITHUB_OUTPUT"
