@@ -188,7 +188,7 @@ jobs:
   publish-gpr:
     name: Publish to GitHub Packages ${{ matrix.hdt_version }}
     needs: [build, discover]
-    if: ${{ needs.build.result == 'success' && inputs.skip_publish != true }}
+    if: ${{ github.event_name != 'pull_request' && needs.build.result == 'success' && inputs.skip_publish != true }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -263,7 +263,7 @@ jobs:
   publish-npm:
     name: Publish to npm ${{ matrix.hdt_version }}
     needs: [build, discover]
-    if: ${{ needs.build.result == 'success' && inputs.skip_publish != true }}
+    if: ${{ github.event_name != 'pull_request' && needs.build.result == 'success' && inputs.skip_publish != true }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -333,7 +333,7 @@ jobs:
   release:
     name: Create release ${{ matrix.hdt_version }}
     needs: [build, publish-gpr, publish-npm, discover]
-    if: ${{ needs.build.result == 'success' }}
+    if: ${{ github.event_name != 'pull_request' && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
